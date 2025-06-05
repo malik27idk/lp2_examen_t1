@@ -53,6 +53,10 @@ public class Dentista {
 	@JoinColumn(name = "id_especialidad")
 	private Especialidad especialidad;
 	
+	@Override
+    public String toString() {
+        return Nom_Com; 
+    }
 	
 
 }

@@ -3,7 +3,10 @@ package GUI;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.time.LocalDate;
+import java.util.List;
 
+import javax.persistence.EntityManager;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
@@ -11,6 +14,11 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+
+import model.Dentista;
+import model.Equipo_Dental;
+import utils.JPAUtil;
+
 import javax.swing.JTextArea;
 import java.awt.Font;
 
@@ -257,27 +265,158 @@ public class DlgEquipoDental extends JDialog implements ActionListener {
 	}
 
 	void cargarDentistas() {
-
+		
+		EntityManager manager = JPAUtil.getEntityManager();
+		
+		try {
+			 
+			String jpql = "select d from Dentista d";
+			List<Dentista> lstDentista = manager.createQuery(jpql, Dentista.class).getResultList();
+			
+			for(Dentista dentista : lstDentista) {
+				cboDentistas.addItem(dentista);
+			}
+			
+		}finally {
+			manager.close();
+		}
+		
+		
 	}
 
 	void listar() {
 
+		 String jpql = "select eqd from Equipo_Dental eqd";
+		    EntityManager manager  = JPAUtil.getEntityManager();
+		    List<Equipo_Dental> resultados = manager.createQuery(jpql, Equipo_Dental.class).getResultList();
+
+		    txtSalida.setText("");  // Limpia salida
+
+		    try {
+		        for (Equipo_Dental equipo_dental : resultados) {
+		            imprimir("Nro. Equipo............: " + equipo_dental.getIdEquipo());
+		            imprimir("Nombre.................: " + equipo_dental.getNombre());
+		            imprimir("Costo..................: " + equipo_dental.getCosto());
+		            imprimir("Fecha de adquisicion...: " + equipo_dental.getFec_adq());
+		            imprimir("Dentista...............: " + equipo_dental.getDentista());
+		            imprimir("Correo..............: " + equipo_dental.getDentista().getCorreo());
+		            imprimir("Especialidad........: " + equipo_dental.getDentista().getEspecialidad());
+		            imprimir("Estado.................: " + equipo_dental.getEstado());
+		            imprimir("-----------------------------------------------------");
+		        }
+		    } finally {
+		        manager.close();
+		    }
+		
 	}
 
 	void adicionar() {
+		
+		EntityManager em = JPAUtil.getEntityManager();
+		try {
+			Equipo_Dental eq = new Equipo_Dental();
+			eq.setNombre(txtNombre.getText());
+			eq.setCosto(Double.parseDouble(txtCosto.getText()));
+			eq.setEstado(cboEstados.getSelectedItem().toString());
+			eq.setFec_adq(LocalDate.now());
 
+			em.getTransaction().begin();
+			em.persist(eq);
+			em.getTransaction().commit();
+
+			mensajeInfo("Equipo Dental registrada");
+			limpiar();
+		} catch (Exception e) {
+			mensajeError("Error al registrar: " + e.getMessage());
+		} finally {
+			em.close();
+		}
+		
 	}
 	
-	void buscar() {
+void buscar() {
+		
+		int id;
+		try {
+			id = Integer.parseInt(txtNroEquipo.getText());
+		} catch (NumberFormatException e) {
+			mensajeError("ID inválido");
+			return;
+		}
+
+		EntityManager ed = JPAUtil.getEntityManager();
+		try {
+			Equipo_Dental eq = ed.find(Equipo_Dental.class, id);
+			if (eq == null) {
+				mensajeError("Solicitud no encontrada");
+			} else {
+				txtNombre.setText(eq.getNombre());
+				cboDentistas.setSelectedItem(eq.getDentista());
+				cboEstados.setSelectedItem(eq.getEstado());
+				txtFechaAdquisicion.setText(eq.getFec_adq().toString());
+				habilitarOk();
+			}
+		} finally {
+			ed.close();
+		}
+
 
 	}
 
 	void modificar() {
+		
+		int id = Integer.parseInt(txtNroEquipo.getText());
 
+		EntityManager ne = JPAUtil.getEntityManager();
+		try {
+			Equipo_Dental eq = ne.find(Equipo_Dental.class, id);
+			if (eq == null) {
+				mensajeError("Solicitud no encontrada");
+				return;
+			}
+
+			ne.getTransaction().begin();
+			eq.setNombre(txtNombre.getText());
+			eq.setEstado(cboEstados.getSelectedItem().toString());
+			eq.setDentista((Dentista) cboDentistas.getSelectedItem());
+			ne.getTransaction().commit();
+
+			mensajeInfo("Solicitud actualizada");
+			limpiar();
+		} catch (Exception e) {
+			mensajeError("Error al modificar: " + e.getMessage());
+		} finally {
+			ne.close();
+		}
+
+		
 	}
 
 	void eliminar() {
+		
+		int id = Integer.parseInt(txtNroEquipo.getText());
 
+		EntityManager ne = JPAUtil.getEntityManager();
+		try {
+			Equipo_Dental ed = ne.find(Equipo_Dental.class, id);
+			if (ed == null) {
+				mensajeError("Solicitud no encontrada");
+				return;
+			}
+
+			ne.getTransaction().begin();
+			ne.remove(ed);
+			ne.getTransaction().commit();
+
+			mensajeInfo("Solicitud eliminada");
+			limpiar();
+		} catch (Exception e) {
+			mensajeError("Error al eliminar: " + e.getMessage());
+		} finally {
+			ne.close();
+		}
+
+		
 	}
 
 	// M�todos tipo void (con par�metros)
